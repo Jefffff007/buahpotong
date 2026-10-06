@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Buah Potong Lantai</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍉</text></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div class="cfgBanner" id="cfgBanner" hidden>
+  Supabase belum terhubung. Isi VITE_SUPABASE_URL &amp; VITE_SUPABASE_ANON_KEY (lihat .env.example / README).
+</div>
+<video class="bgvideo" id="bgVideo" autoplay muted loop playsinline poster="/poster.jpg" aria-hidden="true">
+  <source src="/bg.mp4" type="video/mp4">
+</video>
+<div class="bgscrim" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">🍉 Buah Potong</div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-pesan" aria-selected="true">Pesan</button>
+      <button role="tab" id="tab-dash" aria-selected="false">Dashboard</button>
+    </div>
+  </header>
+
+  <main id="view-pesan">
+    <section class="panel" id="formPanel">
+      <h2>Data pemesan</h2>
+      <div class="row">
+        <div><label for="nama">Nama</label><input id="nama" autocomplete="name" placeholder="Nama kamu"></div>
+        <div><label for="lantai">Lantai</label><input id="lantai" inputmode="numeric" placeholder="Mis. 5"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Pilih buah <span class="count" id="count">(0/3)</span></h2>
+      <div class="grid" id="fruitGrid"></div>
+    </section>
+
+    <section class="panel" id="boxPanel">
+      <h2>Kotak bungkus kamu</h2>
+      <div class="box-wrap"><div class="box"><div class="slots" id="slots"></div></div></div>
+      <p class="hint" id="hint">Pilih sampai 3 buah untuk dicampur.</p>
+      <div class="proof">
+        <h3>Bukti pembayaran</h3>
+        <p>Lampirkan screenshot bukti transfer. Pesanan diproses setelah penjual mengecek bukti ini.</p>
+        <input type="file" id="proofFile" accept="image/*" hidden>
+        <button type="button" class="pick" id="pickBtn">📎 Pilih screenshot</button>
+        <div class="preview" id="preview"><img id="previewImg" alt="Pratinjau bukti pembayaran"><button type="button" id="removeProof">Ganti gambar</button></div>
+      </div>
+      <button class="btn" id="saveBtn" disabled>Simpan pesanan</button>
+      <div class="msg" id="msg" role="status"></div>
+    </section>
+
+    <section class="panel done" id="donePanel" hidden>
+      <h2>Pesanan tersimpan</h2>
+      <p id="doneText"></p>
+      <div class="box-wrap"><div class="box"><div class="slots" id="doneSlots"></div></div></div>
+      <button class="btn ghost" id="againBtn">Pesan lagi</button>
+    </section>
+  </main>
+
+  <main id="view-dash" hidden>
+    <section class="panel" id="loginPanel">
+      <div class="loginWrap">
+        <div class="loginCard">
+          <h2>Masuk ke dashboard</h2>
+          <p>Hanya kamu yang bisa membuka halaman ini.</p>
+          <div class="row">
+            <div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="email kamu"></div>
+            <div><label for="loginPass">Password</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="Password"></div>
+          </div>
+          <button class="btn" id="loginBtn">Masuk</button>
+          <div class="msg" id="loginMsg" role="status"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="dashPanel" hidden>
+      <div class="dashHead">
+        <h2 style="margin:0">Pesanan masuk</h2>
+        <button type="button" class="logout" id="logoutBtn">Keluar</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="sTotal">0</b><span>Total</span></div>
+        <div class="stat"><b id="sBaru">0</b><span>Belum selesai</span></div>
+        <div class="stat"><b id="sDone">0</b><span>Selesai</span></div>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Jam</th><th>Nama</th><th>Lantai</th><th>Buah campur</th><th>Bukti bayar</th><th>Status</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty">Belum ada pesanan. Pesanan baru muncul di sini otomatis.</div>
+      </div>
+      <div class="msg" id="dashMsg" role="status"></div>
+      <div class="note" id="storeNote"></div>
+    </section>
+  </main>
+</div>
+
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Bukti pembayaran">
+  <p class="cap" id="lbCap"></p>
+  <img id="lbImg" alt="Bukti pembayaran">
+  <div class="bar"><a id="lbDl" download="bukti-bayar.jpg">Simpan gambar</a><button type="button" id="lbClose">Tutup</button></div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
