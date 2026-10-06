@@ -146,3 +146,27 @@ tr:last-child td{border-bottom:0}
 .loginCard label{margin-top:8px}
 .dashHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .logout{border:0;background:none;color:var(--pink);font:inherit;font-weight:700;font-size:13px;cursor:pointer;padding:4px 8px}
+
+/* Fitur tambahan: HP opsional, info buah, cek status, kode lacak */
+.opt{font-weight:500;color:var(--muted);font-size:12.5px}
+.fruitInfo{font-size:13.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.45}
+
+.trackToggle{width:100%;text-align:left;border:0;background:none;color:var(--grad2);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:2px}
+.trackBox{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.trackBox .btn{margin-top:10px}
+.trackResult{margin-top:12px;padding:12px;border-radius:12px;background:color-mix(in srgb, var(--bg) 60%, transparent);border:1px solid var(--line);font-size:14px}
+.trackResult b{display:block;font-size:15px;margin-bottom:2px}
+.trackResult .chips{margin-top:6px}
+
+.kodeCard{margin:14px 0;padding:14px;border-radius:14px;text-align:center;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--yellow) 35%, transparent), color-mix(in srgb, var(--grad1) 20%, transparent));
+  border:1.5px dashed var(--grad1)}
+.kodeCard span{font-size:12.5px;color:var(--muted);font-weight:600}
+.kodeCard b{display:block;font-size:26px;letter-spacing:2px;font-family:"Fredoka",system-ui,sans-serif;margin:4px 0}
+.kodeCard p{margin:4px 0 0;font-size:12.5px;color:var(--muted)}
+
+.statusLive{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 0 14px;font-weight:700;font-size:15px}
+.statusDot{width:10px;height:10px;border-radius:50%;background:var(--warn);animation:pulse 1.4s ease-in-out infinite}
+.statusDot.done{background:var(--ok);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.statusDot{animation:none}}

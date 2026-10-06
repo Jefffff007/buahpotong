@@ -17,7 +17,15 @@ let proofBlob = null;
 let orders = [];
 let confirmingId = null;
 let realtimeChannel = null;
+let trackTimer = null;
 const signedUrlCache = new Map(); // path -> {url, exp}
+
+const STATUS_LABEL = { baru: "Diproses", selesai: "Dikonfirmasi" };
+
+function genKode() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(5)))
+    .map((b) => b.toString(36)).join("").toUpperCase().slice(0, 8);
+}
 
 /* ---------- Reduced motion for bg video ---------- */
 try {
@@ -43,6 +51,33 @@ function showTab(t) {
 }
 $("tab-pesan").onclick = () => showTab("pesan");
 $("tab-dash").onclick = () => showTab("dash");
+
+/* ---------- Cek status pesanan (pembeli, tanpa login) ---------- */
+$("trackToggle").onclick = () => {
+  const box = $("trackBox");
+  box.hidden = !box.hidden;
+};
+$("trackBtn").onclick = async () => {
+  const kode = $("trackKode").value.trim().toUpperCase();
+  const msgEl = $("trackMsg"), resultEl = $("trackResult");
+  resultEl.hidden = true;
+  if (!kode) { msgEl.textContent = "Isi kode lacak dulu."; msgEl.className = "msg err"; return; }
+  msgEl.textContent = "Mencari..."; msgEl.className = "msg";
+  const { data, error } = await supabase.rpc("cek_status_pesanan", { p_kode: kode });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) {
+    msgEl.textContent = "Kode tidak ditemukan. Periksa lagi penulisannya."; msgEl.className = "msg err";
+    return;
+  }
+  msgEl.textContent = ""; msgEl.className = "msg";
+  const chips = (row.buah || []).map((id) => byId[id]).filter(Boolean)
+    .map((f) => `<span class="chip">${f.e} ${f.n}</span>`).join("");
+  resultEl.innerHTML = `
+    <b>${STATUS_LABEL[row.status] || row.status}</b>
+    ${row.nama} · lantai ${row.lantai}
+    <div class="chips">${chips}</div>`;
+  resultEl.hidden = false;
+};
 
 /* ---------- Fruit grid ---------- */
 function buildGrid() {
@@ -87,7 +122,7 @@ function refresh() {
   $("hint").textContent = selected.length === 0
     ? "Pilih sampai 3 buah untuk dicampur."
     : selected.length < MAX
-    ? `Kamu bisa tambah ${MAX - selected.length} buah lagi.`
+    ? `Kamu bisa tambah ${MAX - selected.length} buah lagi, atau langsung simpan kalau sudah cukup.`
     : "Kotak penuh. Siap disimpan.";
 }
 function setMsg(t, k) { const m = $("msg"); m.textContent = t; m.className = "msg" + (k ? " " + k : ""); }
@@ -153,9 +188,28 @@ $("lbClose").onclick = () => { $("lb").hidden = true; };
 $("lb").onclick = (e) => { if (e.target === $("lb")) $("lb").hidden = true; };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("lb").hidden = true; });
 
+/* ---------- Status langsung di layar "pesanan tersimpan" ---------- */
+function setLiveStatus(status) {
+  const dot = $("statusDot"), txt = $("statusLiveText");
+  txt.textContent = STATUS_LABEL[status] || status;
+  dot.classList.toggle("done", status === "selesai");
+}
+function startTracking(kode) {
+  stopTracking();
+  setLiveStatus("baru");
+  trackTimer = setInterval(async () => {
+    const { data } = await supabase.rpc("cek_status_pesanan", { p_kode: kode });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return;
+    setLiveStatus(row.status);
+    if (row.status === "selesai") stopTracking();
+  }, 4000);
+}
+function stopTracking() { if (trackTimer) { clearInterval(trackTimer); trackTimer = null; } }
+
 /* ---------- Save order (pembeli, tanpa login) ---------- */
 $("saveBtn").onclick = async () => {
-  const nama = $("nama").value.trim(), lantai = $("lantai").value.trim();
+  const nama = $("nama").value.trim(), lantai = $("lantai").value.trim(), hp = $("hp").value.trim();
   if (!nama) { setMsg("Isi nama dulu.", "err"); $("nama").focus(); return; }
   if (!lantai) { setMsg("Isi nomor lantai dulu.", "err"); $("lantai").focus(); return; }
   if (!selected.length) { setMsg("Pilih minimal 1 buah.", "err"); return; }
@@ -171,16 +225,25 @@ $("saveBtn").onclick = async () => {
     });
     if (upErr) throw upErr;
 
-    const { error: insErr } = await supabase.from("orders").insert({
-      nama, lantai, buah: selected.slice(), bukti_path: path, status: "baru",
-    });
+    let kode = genKode(), insErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await supabase.from("orders").insert({
+        nama, lantai, hp: hp || null, buah: selected.slice(), bukti_path: path, status: "baru", kode_lacak: kode,
+      });
+      insErr = error;
+      if (!error) break;
+      if (error.code === "23505") { kode = genKode(); continue; } // tabrakan kode, coba lagi
+      break;
+    }
     if (insErr) throw insErr;
 
     $("doneText").textContent = `Atas nama ${nama}, lantai ${lantai}.`;
+    $("doneKode").textContent = kode;
     renderSlots($("doneSlots"), selected);
     $("formPanel").hidden = true; $("boxPanel").hidden = true; $("donePanel").hidden = false;
     $("donePanel").scrollIntoView({ behavior: "smooth", block: "start" });
     setMsg("");
+    startTracking(kode);
   } catch (e) {
     console.error(e);
     setMsg("Pesanan belum tersimpan. Periksa koneksi lalu coba lagi.", "err");
@@ -189,7 +252,9 @@ $("saveBtn").onclick = async () => {
   }
 };
 $("againBtn").onclick = () => {
+  stopTracking();
   selected = []; clearProof();
+  $("nama").value = ""; $("lantai").value = ""; $("hp").value = "";
   $("formPanel").hidden = false; $("boxPanel").hidden = false; $("donePanel").hidden = true;
   setMsg(""); refresh(); window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -203,7 +268,14 @@ $("loginBtn").onclick = async () => {
   setLoginMsg("Memeriksa...");
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   $("loginBtn").disabled = false;
-  if (error) { console.error(error); let msg = "Gagal masuk: " + error.message; if (/invalid login credentials/i.test(error.message)) msg = "Email atau password salah."; else if (/email not confirmed/i.test(error.message)) msg = "Akun belum dikonfirmasi di Supabase."; setLoginMsg(msg, "err"); return; }
+  if (error) {
+    console.error(error);
+    let msg = "Gagal masuk: " + error.message;
+    if (/invalid login credentials/i.test(error.message)) msg = "Email atau password salah.";
+    else if (/email not confirmed/i.test(error.message)) msg = "Akun belum dikonfirmasi di Supabase.";
+    setLoginMsg(msg, "err");
+    return;
+  }
   setLoginMsg("");
   $("loginPass").value = "";
 };
@@ -235,7 +307,7 @@ function renderDash() {
     const td = (t) => { const c = document.createElement("td"); if (t != null) c.textContent = t; tr.appendChild(c); return c; };
 
     td(new Date(o.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
-    td(o.nama); td(o.lantai);
+    td(o.nama); td(o.lantai); td(o.hp || "—");
 
     const bc = td(); const chips = document.createElement("div"); chips.className = "chips";
     (o.buah || []).forEach((id) => {
@@ -262,8 +334,10 @@ function renderDash() {
     }
 
     const sc = td(); const sb = document.createElement("button"); sb.type = "button";
-    sb.className = "st " + o.status; sb.textContent = o.status === "baru" ? "Baru" : "Selesai";
-    sb.title = "Ubah status"; sb.onclick = () => toggleStatus(o); sc.appendChild(sb);
+    sb.className = "st " + o.status;
+    sb.textContent = o.status === "baru" ? "Konfirmasi" : "✓ Terkonfirmasi";
+    sb.title = o.status === "baru" ? "Tandai pesanan ini sudah dikonfirmasi" : "Klik untuk batalkan konfirmasi";
+    sb.onclick = () => toggleStatus(o); sc.appendChild(sb);
 
     const dc = td(); dc.className = "dcell";
     if (confirmingId === o.id) {
