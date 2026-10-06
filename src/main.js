@@ -203,7 +203,7 @@ $("loginBtn").onclick = async () => {
   setLoginMsg("Memeriksa...");
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   $("loginBtn").disabled = false;
-  if (error) { setLoginMsg("Email atau password salah.", "err"); return; }
+  if (error) { console.error(error); let msg = "Gagal masuk: " + error.message; if (/invalid login credentials/i.test(error.message)) msg = "Email atau password salah."; else if (/email not confirmed/i.test(error.message)) msg = "Akun belum dikonfirmasi di Supabase."; setLoginMsg(msg, "err"); return; }
   setLoginMsg("");
   $("loginPass").value = "";
 };
